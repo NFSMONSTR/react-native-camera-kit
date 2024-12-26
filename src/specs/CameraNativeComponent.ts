@@ -18,7 +18,6 @@ type OnOrientationChangeData = {
 type OnZoom = {
     zoom: Double;
 }
-
 export interface NativeProps extends ViewProps {
   flashMode?: string;
   focusMode?: string;
@@ -44,10 +43,11 @@ export interface NativeProps extends ViewProps {
   shutterPhotoSound?: boolean;
   onCaptureButtonPressIn?: DirectEventHandler<{}>;
   onCaptureButtonPressOut?: DirectEventHandler<{}>;
-
+  outputPath?: string;
+  cameraShutterSound?: string;
+  cameraAspectRatio?: string;
   // not mentioned in props but available on the native side
   shutterAnimationDuration?: Int32;
-  outputPath?: string;
   onPictureTaken?: DirectEventHandler<{uri: string}>;
 }
 

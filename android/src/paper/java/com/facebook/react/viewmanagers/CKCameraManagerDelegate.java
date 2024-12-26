@@ -10,7 +10,9 @@
 package com.facebook.react.viewmanagers;
 
 import android.view.View;
+
 import androidx.annotation.Nullable;
+
 import com.facebook.react.bridge.ColorPropConverter;
 import com.facebook.react.uimanager.BaseViewManagerDelegate;
 import com.facebook.react.uimanager.BaseViewManagerInterface;
@@ -76,11 +78,17 @@ public class CKCameraManagerDelegate<T extends View, U extends BaseViewManagerIn
       case "shutterPhotoSound":
         mViewManager.setShutterPhotoSound(view, value == null ? false : (boolean) value);
         break;
-      case "shutterAnimationDuration":
-        mViewManager.setShutterAnimationDuration(view, value == null ? 0 : ((Double) value).intValue());
-        break;
       case "outputPath":
         mViewManager.setOutputPath(view, value == null ? null : (String) value);
+        break;
+      case "cameraShutterSound":
+        mViewManager.setCameraShutterSound(view, value == null ? null : (String) value);
+        break;
+      case "cameraAspectRatio":
+        mViewManager.setCameraAspectRatio(view, value == null ? null : (String) value);
+        break;
+      case "shutterAnimationDuration":
+        mViewManager.setShutterAnimationDuration(view, value == null ? 0 : ((Double) value).intValue());
         break;
       default:
         super.setProperty(view, propName, value);

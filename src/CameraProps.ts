@@ -7,6 +7,7 @@ import {
   type TorchMode,
   type ResizeMode,
   type CodeFormat,
+  type AspectRatio,
 } from './types';
 import { Orientation } from './index';
 
@@ -112,4 +113,10 @@ export interface CameraProps extends ViewProps {
   shutterPhotoSound?: boolean;
   onCaptureButtonPressIn?: ({ nativeEvent: {} }) => void;
   onCaptureButtonPressOut?: ({ nativeEvent: {} }) => void;
+  /** **Android only**. Aspect ratio of preview and photo */
+  cameraAspectRatio?: AspectRatio;
+  /** **Android only**. Path to save photo (loads from raw directory, filename without extension) */
+  outputPath?: string;
+  /** **Android only**. Custom shutter sound */
+  cameraShutterSound?: string;
 }

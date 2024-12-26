@@ -28,6 +28,8 @@ export type ZoomMode = 'on' | 'off';
 
 export type ResizeMode = 'cover' | 'contain';
 
+export type AspectRatio = '16:9' | '4:3';
+
 export type CaptureData = {
   uri: string;
   name: string;

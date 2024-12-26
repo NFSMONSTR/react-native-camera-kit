@@ -21,7 +21,7 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
 
     override fun getDelegate(): ViewManagerDelegate<CKCamera> = delegate
 
-    override fun getName() : String {
+    override fun getName(): String {
         return "CKCamera"
     }
 
@@ -42,7 +42,7 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
                 ReadableType.Map -> "Map"
                 ReadableType.Number -> "Number"
                 ReadableType.String -> "String"
-                else ->  ""
+                else -> ""
             }
         }
         logCommand += ")"
@@ -51,11 +51,16 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
 
     override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
         return MapBuilder.of(
-            OrientationChangeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onOrientationChange"),
-            ReadCodeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onReadCode"),
-            PictureTakenEvent.EVENT_NAME, MapBuilder.of("registrationName", "onPictureTaken"),
-            ZoomEvent.EVENT_NAME, MapBuilder.of("registrationName", "onZoom"),
-            ErrorEvent.EVENT_NAME, MapBuilder.of("registrationName", "onError")
+            OrientationChangeEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onOrientationChange"),
+            ReadCodeEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onReadCode"),
+            PictureTakenEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onPictureTaken"),
+            ZoomEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onZoom"),
+            ErrorEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onError")
         )
     }
 
@@ -138,7 +143,20 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
 
     override fun setResetFocusWhenMotionDetected(view: CKCamera?, value: Boolean) = Unit
 
-    override fun setResizeMode(view: CKCamera?, value: String?) = Unit
+    @ReactProp(name = "resizeMode")
+    override fun setResizeMode(view: CKCamera, value: String?) {
+        view.setResizeMode(value)
+    }
+
+    @ReactProp(name = "cameraAspectRatio")
+    override fun setCameraAspectRatio(view: CKCamera, value: String?) {
+        view.setCameraAspectRatio(value ?: "16:9")
+    }
+
+    @ReactProp(name = "cameraShutterSound")
+    override fun setCameraShutterSound(view: CKCamera, value: String?) {
+        view.setCameraShutterSound(value)
+    }
 
     override fun setScanThrottleDelay(view: CKCamera?, value: Int) = Unit
 }

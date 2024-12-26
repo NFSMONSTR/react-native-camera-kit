@@ -7,10 +7,14 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
 import android.hardware.SensorManager
 import android.media.AudioManager
 import android.media.MediaActionSound
+import android.media.MediaPlayer
 import android.net.Uri
 import android.util.DisplayMetrics
 import android.util.Log
@@ -27,10 +31,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleObserver
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
-import com.facebook.react.bridge.WritableMap
 import com.facebook.react.uimanager.ThemedReactContext
-import com.facebook.react.uimanager.events.RCTEventEmitter
+import com.facebook.react.uimanager.UIManagerHelper
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.rncamerakit.barcode.BarcodeFrame
+import com.rncamerakit.events.*
 import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -38,15 +43,9 @@ import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.RectF
-import com.facebook.react.uimanager.UIManagerHelper
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.rncamerakit.events.*
 
 class RectOverlay constructor(context: Context) :
-        View(context) {
+    View(context) {
 
     private val rectBounds: MutableList<RectF> = mutableListOf()
     private val paint = Paint().apply {
@@ -66,8 +65,8 @@ class RectOverlay constructor(context: Context) :
         this.rectBounds.addAll(rectBounds)
         invalidate()
         postDelayed({
-          this.rectBounds.clear()
-          invalidate()
+            this.rectBounds.clear()
+            invalidate()
         }, 1000)
     }
 }
@@ -100,24 +99,27 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var maxZoom: Double? = null
     private var zoomStartedAt = 1.0f
     private var pinchGestureStartedAt = 0.0f
+    private var aspectRatio = AspectRatio.RATIO_16_9
+    private var resizeMode = PreviewView.ScaleType.FILL_CENTER
+    private var mPlayer: MediaPlayer? = null
 
     // Barcode Props
     private var scanBarcode: Boolean = false
     private var frameColor = Color.GREEN
     private var laserColor = Color.RED
 
-    private fun getActivity() : Activity {
+    private fun getActivity(): Activity {
         return currentContext.currentActivity!!
     }
 
     init {
         viewFinder.layoutParams = LinearLayout.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.MATCH_PARENT
+            LayoutParams.MATCH_PARENT,
+            LayoutParams.MATCH_PARENT
         )
         installHierarchyFitter(viewFinder)
         addView(viewFinder)
-
+        viewFinder.scaleType = resizeMode
         effectLayer.alpha = 0F
         effectLayer.setBackgroundColor(Color.BLACK)
         addView(effectLayer)
@@ -149,8 +151,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 override fun onChildViewRemoved(parent: View?, child: View?) = Unit
                 override fun onChildViewAdded(parent: View?, child: View?) {
                     parent?.measure(
-                            MeasureSpec.makeMeasureSpec(measuredWidth, MeasureSpec.EXACTLY),
-                            MeasureSpec.makeMeasureSpec(measuredHeight, MeasureSpec.EXACTLY)
+                        MeasureSpec.makeMeasureSpec(measuredWidth, MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(measuredHeight, MeasureSpec.EXACTLY)
                     )
                     parent?.layout(0, 0, parent.measuredWidth, parent.measuredHeight)
                 }
@@ -167,55 +169,62 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             cameraProvider = cameraProviderFuture.get()
 
             // Rotate the image according to device orientation, even when UI orientation is locked
-            orientationListener = object : OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
-                override fun onOrientationChanged(orientation: Int) {
-                    val imageCapture = imageCapture ?: return
-                    var newOrientation: Int = imageCapture.targetRotation
-                    if (orientation >= 315 || orientation < 45) {
-                        newOrientation = Surface.ROTATION_0
-                    } else if (orientation in 225..314) {
-                        newOrientation = Surface.ROTATION_90
-                    } else if (orientation in 135..224) {
-                        newOrientation = Surface.ROTATION_180
-                    } else if (orientation in 45..134) {
-                        newOrientation = Surface.ROTATION_270
-                    }
-                    if (newOrientation != imageCapture.targetRotation) {
-                        imageCapture.targetRotation = newOrientation
-                        onOrientationChange(newOrientation)
+            orientationListener =
+                object : OrientationEventListener(context, SensorManager.SENSOR_DELAY_UI) {
+                    override fun onOrientationChanged(orientation: Int) {
+                        val imageCapture = imageCapture ?: return
+                        var newOrientation: Int = imageCapture.targetRotation
+                        if (orientation >= 315 || orientation < 45) {
+                            newOrientation = Surface.ROTATION_0
+                        } else if (orientation in 225..314) {
+                            newOrientation = Surface.ROTATION_90
+                        } else if (orientation in 135..224) {
+                            newOrientation = Surface.ROTATION_180
+                        } else if (orientation in 45..134) {
+                            newOrientation = Surface.ROTATION_270
+                        }
+                        if (newOrientation != imageCapture.targetRotation) {
+                            imageCapture.targetRotation = newOrientation
+                            onOrientationChange(newOrientation)
+                        }
                     }
                 }
-            }
             orientationListener!!.enable()
 
-            val scaleDetector =  ScaleGestureDetector(context, object: ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-                    val cameraZoom = camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: return false
-                    detector ?: return false
-                    zoomStartedAt = cameraZoom
-                    pinchGestureStartedAt = detector.currentSpan
-                    return true
-                }
-                override fun onScale(detector: ScaleGestureDetector): Boolean {
-                    if (zoomMode == "off") return true
-                    if (detector == null) return true
-                    val videoDevice = camera ?: return true
-                    val pinchScale = detector.currentSpan / pinchGestureStartedAt
-
-                    val desiredZoomFactor = zoomStartedAt * pinchScale
-                    val zoomForDevice = getValidZoom(videoDevice, desiredZoomFactor.toDouble())
-
-                    if (zoomForDevice != (videoDevice.cameraInfo.zoomState.value?.zoomRatio ?: -1)) {
-                        // Only trigger zoom changes if it's an uncontrolled component (zoom isn't manually set)
-                        // otherwise it's likely to cause issues inf. loops
-                        if (zoom == null) {
-                            videoDevice.cameraControl.setZoomRatio(zoomForDevice.toFloat())
-                        }
-                        onZoom(zoomForDevice)
+            val scaleDetector = ScaleGestureDetector(
+                context,
+                object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                        val cameraZoom =
+                            camera?.cameraInfo?.zoomState?.value?.zoomRatio ?: return false
+                        detector ?: return false
+                        zoomStartedAt = cameraZoom
+                        pinchGestureStartedAt = detector.currentSpan
+                        return true
                     }
-                    return true
-                }
-            })
+
+                    override fun onScale(detector: ScaleGestureDetector): Boolean {
+                        if (zoomMode == "off") return true
+                        if (detector == null) return true
+                        val videoDevice = camera ?: return true
+                        val pinchScale = detector.currentSpan / pinchGestureStartedAt
+
+                        val desiredZoomFactor = zoomStartedAt * pinchScale
+                        val zoomForDevice = getValidZoom(videoDevice, desiredZoomFactor.toDouble())
+
+                        if (zoomForDevice != (videoDevice.cameraInfo.zoomState.value?.zoomRatio
+                                ?: -1)
+                        ) {
+                            // Only trigger zoom changes if it's an uncontrolled component (zoom isn't manually set)
+                            // otherwise it's likely to cause issues inf. loops
+                            if (zoom == null) {
+                                videoDevice.cameraControl.setZoomRatio(zoomForDevice.toFloat())
+                            }
+                            onZoom(zoomForDevice)
+                        }
+                        return true
+                    }
+                })
 
             // Tap to focus
             viewFinder.setOnTouchListener { _, event ->
@@ -247,7 +256,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private fun getValidZoom(videoDevice: Camera?, zoom: Double): Double {
         var zoomOrDefault = zoom
         val minZoomFactor = videoDevice?.cameraInfo?.zoomState?.value?.minZoomRatio?.toDouble()
-        var maxZoomFactor: Double? = videoDevice?.cameraInfo?.zoomState?.value?.maxZoomRatio?.toDouble()
+        var maxZoomFactor: Double? =
+            videoDevice?.cameraInfo?.zoomState?.value?.maxZoomRatio?.toDouble()
         val maxZoom = this.maxZoom
         if (maxZoom != null) {
             maxZoomFactor = min(maxZoomFactor ?: maxZoom, maxZoom)
@@ -267,32 +277,31 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         val metrics = DisplayMetrics().also { viewFinder.display.getRealMetrics(it) }
         Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
 
-        val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
-        Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
+        Log.d(TAG, "Preview aspect ratio: $aspectRatio")
 
         val rotation = viewFinder.display.rotation
 
         // CameraProvider
         val cameraProvider = cameraProvider
-                ?: throw IllegalStateException("Camera initialization failed.")
+            ?: throw IllegalStateException("Camera initialization failed.")
 
         // CameraSelector
         val cameraSelector = CameraSelector.Builder().requireLensFacing(lensType).build()
 
         // Preview
         preview = Preview.Builder()
-                // We request aspect ratio but no resolution
-                .setTargetAspectRatio(screenAspectRatio)
-                // Set initial target rotation
-                .setTargetRotation(rotation)
-                .build()
+            // We request aspect ratio but no resolution
+            .setTargetAspectRatio(aspectRatio)
+            // Set initial target rotation
+            .setTargetRotation(rotation)
+            .build()
 
         // ImageCapture
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             // We request aspect ratio but no resolution to match preview config, but letting
             // CameraX optimize for whatever specific resolution best fits our use cases
-            .setTargetAspectRatio(screenAspectRatio)
+            .setTargetAspectRatio(aspectRatio)
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
             .setTargetRotation(rotation)
@@ -301,7 +310,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         // ImageAnalysis
         imageAnalyzer = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setTargetAspectRatio(screenAspectRatio)
+            .setTargetAspectRatio(aspectRatio)
             .build()
 
         val useCases = mutableListOf(preview, imageCapture)
@@ -322,7 +331,11 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         try {
             // A variable number of use-cases can be passed here -
             // camera provides access to CameraControl & CameraInfo
-            val newCamera = cameraProvider.bindToLifecycle(getActivity() as AppCompatActivity, cameraSelector, *useCases.toTypedArray())
+            val newCamera = cameraProvider.bindToLifecycle(
+                getActivity() as AppCompatActivity,
+                cameraSelector,
+                *useCases.toTypedArray()
+            )
             camera = newCamera
 
             resetZoom(newCamera)
@@ -350,7 +363,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
      *  @param height - preview height
      *  @return suitable aspect ratio
      */
-    private fun aspectRatio(width: Int, height: Int): Int {
+    private fun getAspectRatio(width: Int, height: Int): Int {
         val previewRatio = max(width, height).toDouble() / min(width, height)
         if (abs(previewRatio - RATIO_4_3_VALUE) <= abs(previewRatio - RATIO_16_9_VALUE)) {
             return AspectRatio.RATIO_4_3
@@ -362,14 +375,14 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         if (shutterAnimationDuration == 0) return
 
         effectLayer
-                .animate()
-                .alpha(1F)
-                .setDuration(shutterAnimationDuration.toLong())
-                .setListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        effectLayer.animate().alpha(0F).duration = shutterAnimationDuration.toLong()
-                    }
-                }).start()
+            .animate()
+            .alpha(1F)
+            .setDuration(shutterAnimationDuration.toLong())
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    effectLayer.animate().alpha(0F).duration = shutterAnimationDuration.toLong()
+                }
+            }).start()
     }
 
     fun setShutterAnimationDuration(duration: Int) {
@@ -383,7 +396,13 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     fun capture(options: Map<String, Any>, promise: Promise) {
         // Create the output file option to store the captured image in MediaStore
         val outputPath: String = when {
-            outputPath != null -> outputPath!!
+            outputPath != null -> {
+                val t = File(outputPath!!)
+                val out = File.createTempFile("ckcap", ".jpg", t)
+                out.deleteOnExit()
+                out.canonicalPath
+
+            }
             else -> {
                 val out = File.createTempFile("ckcap", ".jpg", context.cacheDir)
                 out.deleteOnExit()
@@ -393,52 +412,66 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         val outputFile = File(outputPath)
         val outputOptions = ImageCapture.OutputFileOptions
-                    .Builder(outputFile)
-                    .build()
+            .Builder(outputFile)
+            .build()
 
         flashViewFinder()
 
         if (shutterPhotoSound) {
             val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
             if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-                MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
+                if (mPlayer != null) {
+                    if (mPlayer?.isPlaying == true) {
+                        mPlayer?.stop()
+                    }
+                    Log.d(TAG, "PLAY CUSTOM SOUND")
+                    mPlayer?.start()
+                } else {
+                    Log.d(TAG, "PLAY DEFAULT")
+                    MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
+                }
             }
         }
 
         // Setup image capture listener which is triggered after photo has been taken
         imageCapture?.takePicture(
-                outputOptions, ContextCompat.getMainExecutor(getActivity()), object : ImageCapture.OnImageSavedCallback {
-            override fun onError(ex: ImageCaptureException) {
-                Log.e(TAG, "CameraView: Photo capture failed: ${ex.message}", ex)
-                promise.reject("E_CAPTURE_FAILED", "takePicture failed: ${ex.message}")
-            }
-
-            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                try {
-                    val uri = output.savedUri ?: Uri.fromFile(outputFile)
-                    val id = uri?.path
-                    val name = uri?.lastPathSegment
-                    val path = uri?.path
-
-                    val savedUri = (output.savedUri ?: outputPath).toString()
-                    onPictureTaken(savedUri)
-                    Log.d(TAG, "CameraView: Photo capture succeeded: $savedUri")
-
-                    val imageInfo = Arguments.createMap()
-                    imageInfo.putString("uri", uri.toString())
-                    imageInfo.putString("id", id)
-                    imageInfo.putString("name", name)
-                    imageInfo.putInt("width", width)
-                    imageInfo.putInt("height", height)
-                    imageInfo.putString("path", path)
-
-                    promise.resolve(imageInfo)
-                } catch (ex: Exception) {
-                    Log.e(TAG, "Error while saving or decoding saved photo: ${ex.message}", ex)
-                    promise.reject("E_ON_IMG_SAVED", "Error while reading saved photo: ${ex.message}")
+            outputOptions,
+            ContextCompat.getMainExecutor(getActivity()),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onError(ex: ImageCaptureException) {
+                    Log.e(TAG, "CameraView: Photo capture failed: ${ex.message}", ex)
+                    promise.reject("E_CAPTURE_FAILED", "takePicture failed: ${ex.message}")
                 }
-            }
-        })
+
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    try {
+                        val uri = output.savedUri ?: Uri.fromFile(outputFile)
+                        val id = uri?.path
+                        val name = uri?.lastPathSegment
+                        val path = uri?.path
+
+                        val savedUri = (output.savedUri ?: outputPath).toString()
+                        onPictureTaken(savedUri)
+                        Log.d(TAG, "CameraView: Photo capture succeeded: $savedUri")
+
+                        val imageInfo = Arguments.createMap()
+                        imageInfo.putString("uri", uri.toString())
+                        imageInfo.putString("id", id)
+                        imageInfo.putString("name", name)
+                        imageInfo.putInt("width", width)
+                        imageInfo.putInt("height", height)
+                        imageInfo.putString("path", path)
+
+                        promise.resolve(imageInfo)
+                    } catch (ex: Exception) {
+                        Log.e(TAG, "Error while saving or decoding saved photo: ${ex.message}", ex)
+                        promise.reject(
+                            "E_ON_IMG_SAVED",
+                            "Error while reading saved photo: ${ex.message}"
+                        )
+                    }
+                }
+            })
     }
 
     private fun focusOnPoint(x: Float?, y: Float?) {
@@ -453,7 +486,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         if (autoFocus == "off") builder.disableAutoCancel()
 
         camera?.cameraControl?.startFocusAndMetering(builder.build())
-        val focusRects = listOf(RectF(x-75, y-75, x+75, y+75))
+        val focusRects = listOf(RectF(x - 75, y - 75, x + 75, y + 75))
         rectOverlay.drawRectBounds(focusRects)
     }
 
@@ -462,7 +495,14 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
         UIManagerHelper
             .getEventDispatcherForReactTag(currentContext, id)
-            ?.dispatchEvent(ReadCodeEvent(surfaceId, id, barcodes.first().rawValue, codeFormat.code))
+            ?.dispatchEvent(
+                ReadCodeEvent(
+                    surfaceId,
+                    id,
+                    barcodes.first().rawValue,
+                    codeFormat.code
+                )
+            )
     }
 
     private fun onOrientationChange(orientation: Int) {
@@ -498,10 +538,12 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 camera.cameraControl.enableTorch(false)
                 imageCapture.flashMode = ImageCapture.FLASH_MODE_ON
             }
+
             "off" -> {
                 camera.cameraControl.enableTorch(false)
                 imageCapture.flashMode = ImageCapture.FLASH_MODE_OFF
             }
+
             else -> { // 'auto' and any wrong values
                 imageCapture.flashMode = ImageCapture.FLASH_MODE_AUTO
                 camera.cameraControl.enableTorch(false)
@@ -515,9 +557,11 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             "on" -> {
                 camera.cameraControl.enableTorch(true)
             }
+
             "off" -> {
                 camera.cameraControl.enableTorch(false)
             }
+
             else -> { // 'auto' and any wrong values
                 camera.cameraControl.enableTorch(false)
             }
@@ -526,7 +570,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
     fun setAutoFocus(mode: String = "on") {
         autoFocus = mode
-        when(mode) {
+        when (mode) {
             // "cancel" clear AF points and engages continuous auto-focus
             "on" -> camera?.cameraControl?.cancelFocusAndMetering()
             // 'off': Handled when you tap to focus
@@ -596,7 +640,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             barcodeFrame = BarcodeFrame(context)
             val actualPreviewWidth = resources.displayMetrics.widthPixels
             val actualPreviewHeight = resources.displayMetrics.heightPixels
-            val height: Int = convertDeviceHeightToSupportedAspectRatio(actualPreviewWidth, actualPreviewHeight)
+            val height: Int =
+                convertDeviceHeightToSupportedAspectRatio(actualPreviewWidth, actualPreviewHeight)
             barcodeFrame!!.setFrameColor(frameColor)
             barcodeFrame!!.setLaserColor(laserColor)
             (barcodeFrame as View).layout(0, 0, this.effectLayer.width, this.effectLayer.height)
@@ -621,7 +666,59 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         }
     }
 
-    private fun convertDeviceHeightToSupportedAspectRatio(actualWidth: Int, actualHeight: Int): Int {
+    fun setCameraAspectRatio(value: String?) {
+        if (value != null) {
+            val newAspectRatio = when (value) {
+                "4:3" -> AspectRatio.RATIO_4_3
+                else -> AspectRatio.RATIO_16_9
+            }
+            if (aspectRatio != newAspectRatio) {
+                aspectRatio = newAspectRatio
+                bindCameraUseCases()
+            }
+        }
+    }
+
+    fun setResizeMode(value: String?) {
+        if (value == null) {
+            return
+        }
+
+        val newResizeMode = when (value) {
+            "contain" -> PreviewView.ScaleType.FIT_CENTER
+            else -> PreviewView.ScaleType.FILL_CENTER
+        }
+
+        if (newResizeMode != resizeMode) {
+            resizeMode = newResizeMode
+            viewFinder?.scaleType = newResizeMode
+        }
+    }
+
+    fun clearPlayer() {
+        if (mPlayer != null) {
+            if (mPlayer?.isPlaying == true) {
+                mPlayer?.stop()
+            }
+            mPlayer = null
+        }
+    }
+
+    fun setCameraShutterSound(value: String?) {
+        if (value == null) {
+            clearPlayer()
+            return
+        }
+        val res = currentContext.resources.getIdentifier(value, "raw", currentContext.packageName)
+        if (res != 0) {
+            mPlayer = MediaPlayer.create(currentContext, res)
+        }
+    }
+
+    private fun convertDeviceHeightToSupportedAspectRatio(
+        actualWidth: Int,
+        actualHeight: Int
+    ): Int {
         val maxScreenRatio = 16 / 9f
         return (if (actualHeight / actualWidth > maxScreenRatio) actualWidth * maxScreenRatio else actualHeight).toInt()
     }
@@ -629,14 +726,14 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private fun hasPermissions(): Boolean {
         val requiredPermissions = arrayOf(Manifest.permission.CAMERA)
         if (requiredPermissions.all {
-                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-                }) {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }) {
             return true
         }
         ActivityCompat.requestPermissions(
-                getActivity(),
-                requiredPermissions,
-                42 // random callback identifier
+            getActivity(),
+            requiredPermissions,
+            42 // random callback identifier
         )
         return false
     }
