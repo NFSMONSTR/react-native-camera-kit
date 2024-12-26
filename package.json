@@ -1,5 +1,5 @@
 {
-  "name": "react-native-camera-kit",
+  "name": "@nfsmonstr/react-native-camera-kit",
   "repository": {
     "type": "git",
     "url": "https://github.com/teslamotors/react-native-camera-kit.git"
