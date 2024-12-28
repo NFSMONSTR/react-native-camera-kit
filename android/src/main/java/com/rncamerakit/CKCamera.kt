@@ -421,11 +421,16 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
             if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
                 if (mPlayer != null) {
-                    if (mPlayer?.isPlaying == true) {
-                        mPlayer?.stop()
+                    try {
+                        Log.d(TAG, "PLAY CUSTOM SOUND")
+                        if (mPlayer?.isPlaying == true) {
+                            mPlayer?.seekTo(0)
+                        }
+
+                        mPlayer?.start()
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
                     }
-                    Log.d(TAG, "PLAY CUSTOM SOUND")
-                    mPlayer?.start()
                 } else {
                     Log.d(TAG, "PLAY DEFAULT")
                     MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
