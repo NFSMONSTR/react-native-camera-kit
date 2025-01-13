@@ -10,7 +10,6 @@
 package com.facebook.react.viewmanagers;
 
 import android.view.View;
-
 import androidx.annotation.Nullable;
 
 public interface CKCameraManagerInterface<T extends View> {
@@ -35,5 +34,6 @@ public interface CKCameraManagerInterface<T extends View> {
   void setOutputPath(T view, @Nullable String value);
   void setCameraShutterSound(T view, @Nullable String value);
   void setCameraAspectRatio(T view, @Nullable String value);
+  void setJpegQuality(T view, int value);
   void setShutterAnimationDuration(T view, int value);
 }

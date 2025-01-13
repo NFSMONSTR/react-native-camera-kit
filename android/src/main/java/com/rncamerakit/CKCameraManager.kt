@@ -159,4 +159,9 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
     }
 
     override fun setScanThrottleDelay(view: CKCamera?, value: Int) = Unit
+
+    @ReactProp(name = "jpegQuality")
+    override fun setJpegQuality(view: CKCamera?, value: Int) {
+        view?.setJpegQuality(value)
+    }
 }

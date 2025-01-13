@@ -119,4 +119,6 @@ export interface CameraProps extends ViewProps {
   outputPath?: string;
   /** **Android only**. Custom shutter sound */
   cameraShutterSound?: string;
+  /** **Android only**. Jpeg image quality 1-100 */
+  jpegQuality?: number;
 }

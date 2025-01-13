@@ -22,6 +22,7 @@ import android.view.*
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.annotation.ColorInt
+import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -102,6 +103,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var aspectRatio = AspectRatio.RATIO_16_9
     private var resizeMode = PreviewView.ScaleType.FILL_CENTER
     private var mPlayer: MediaPlayer? = null
+    private var jpegQuality: Int = 95
 
     // Barcode Props
     private var scanBarcode: Boolean = false
@@ -271,6 +273,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         return zoomOrDefault
     }
 
+    @OptIn(ExperimentalZeroShutterLag::class)
     private fun bindCameraUseCases() {
         if (viewFinder.display == null) return
         // Get screen metrics used to setup camera for full screen resolution
@@ -298,10 +301,11 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         // ImageCapture
         imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
             // We request aspect ratio but no resolution to match preview config, but letting
             // CameraX optimize for whatever specific resolution best fits our use cases
             .setTargetAspectRatio(aspectRatio)
+            .setJpegQuality(jpegQuality)
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
             .setTargetRotation(rotation)
@@ -681,6 +685,13 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 aspectRatio = newAspectRatio
                 bindCameraUseCases()
             }
+        }
+    }
+
+    fun setJpegQuality(value: Int?) {
+        if (value != null) {
+            jpegQuality = value
+            bindCameraUseCases()
         }
     }
 
