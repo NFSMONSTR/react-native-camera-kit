@@ -164,4 +164,9 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
     override fun setJpegQuality(view: CKCamera?, value: Int) {
         view?.setJpegQuality(value)
     }
+
+    @ReactProp(name = "cameraPreShutterSound")
+    override fun setCameraPreShutterSound(view: CKCamera, value: String?) {
+        view.setCameraPreShutterSound(value)
+    }
 }

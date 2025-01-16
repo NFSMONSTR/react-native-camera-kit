@@ -35,5 +35,6 @@ public interface CKCameraManagerInterface<T extends View> {
   void setCameraShutterSound(T view, @Nullable String value);
   void setCameraAspectRatio(T view, @Nullable String value);
   void setJpegQuality(T view, int value);
+  void setCameraPreShutterSound(T view, @Nullable String value);
   void setShutterAnimationDuration(T view, int value);
 }

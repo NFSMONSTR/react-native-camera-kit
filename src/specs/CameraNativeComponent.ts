@@ -47,6 +47,7 @@ export interface NativeProps extends ViewProps {
   cameraShutterSound?: string;
   cameraAspectRatio?: string;
   jpegQuality?: Int32;
+  cameraPreShutterSound?: string;
   // not mentioned in props but available on the native side
   shutterAnimationDuration?: Int32;
   onPictureTaken?: DirectEventHandler<{uri: string}>;

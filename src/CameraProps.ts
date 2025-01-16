@@ -121,4 +121,6 @@ export interface CameraProps extends ViewProps {
   cameraShutterSound?: string;
   /** **Android only**. Jpeg image quality 1-100 */
   jpegQuality?: number;
+  /** **Android only**. Pre shutter sound (plays instantly before takePicture is called)*/
+  cameraPreShutterSound?: string;
 }

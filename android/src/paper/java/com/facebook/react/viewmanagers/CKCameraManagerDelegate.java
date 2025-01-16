@@ -88,6 +88,9 @@ public class CKCameraManagerDelegate<T extends View, U extends BaseViewManagerIn
       case "jpegQuality":
         mViewManager.setJpegQuality(view, value == null ? 0 : ((Double) value).intValue());
         break;
+      case "cameraPreShutterSound":
+        mViewManager.setCameraPreShutterSound(view, value == null ? null : (String) value);
+        break;
       case "shutterAnimationDuration":
         mViewManager.setShutterAnimationDuration(view, value == null ? 0 : ((Double) value).intValue());
         break;

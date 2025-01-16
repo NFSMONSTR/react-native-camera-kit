@@ -103,6 +103,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var aspectRatio = AspectRatio.RATIO_16_9
     private var resizeMode = PreviewView.ScaleType.FILL_CENTER
     private var mPlayer: MediaPlayer? = null
+    private var mPreShutterPlayer: MediaPlayer? = null
     private var jpegQuality: Int = 95
 
     // Barcode Props
@@ -419,26 +420,17 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             .Builder(outputFile)
             .build()
 
-        flashViewFinder()
-
-        if (shutterPhotoSound) {
-            val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-                if (mPlayer != null) {
-                    try {
-                        Log.d(TAG, "PLAY CUSTOM SOUND")
-                        if (mPlayer?.isPlaying == true) {
-                            mPlayer?.seekTo(0)
-                        }
-
-                        mPlayer?.start()
-                    } catch (e: java.lang.Exception) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    Log.d(TAG, "PLAY DEFAULT")
-                    MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
+        val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL && mPreShutterPlayer != null) {
+            try {
+                Log.d(TAG, "PLAY PRESHUTTER SOUND")
+                if (mPreShutterPlayer?.isPlaying == true) {
+                    mPreShutterPlayer?.seekTo(0)
                 }
+
+                mPreShutterPlayer?.start()
+            } catch (e: java.lang.Exception) {
+                e.printStackTrace()
             }
         }
 
@@ -450,6 +442,33 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 override fun onError(ex: ImageCaptureException) {
                     Log.e(TAG, "CameraView: Photo capture failed: ${ex.message}", ex)
                     promise.reject("E_CAPTURE_FAILED", "takePicture failed: ${ex.message}")
+                }
+
+                override fun onCaptureStarted() {
+                    super.onCaptureStarted()
+                    Log.d(TAG,"Capture started")
+                    flashViewFinder()
+
+                    if (shutterPhotoSound) {
+                        val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                        if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+                            if (mPlayer != null) {
+                                try {
+                                    Log.d(TAG, "PLAY CUSTOM SOUND")
+                                    if (mPlayer?.isPlaying == true) {
+                                        mPlayer?.seekTo(0)
+                                    }
+
+                                    mPlayer?.start()
+                                } catch (e: java.lang.Exception) {
+                                    e.printStackTrace()
+                                }
+                            } else {
+                                Log.d(TAG, "PLAY DEFAULT")
+                                MediaActionSound().play(MediaActionSound.SHUTTER_CLICK)
+                            }
+                        }
+                    }
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
@@ -720,6 +739,15 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         }
     }
 
+    fun clearPreShutterPlayer() {
+        if (mPreShutterPlayer != null) {
+            if (mPreShutterPlayer?.isPlaying == true) {
+                mPreShutterPlayer?.stop()
+            }
+            mPreShutterPlayer = null
+        }
+    }
+
     fun setCameraShutterSound(value: String?) {
         if (value == null) {
             clearPlayer()
@@ -728,6 +756,17 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         val res = currentContext.resources.getIdentifier(value, "raw", currentContext.packageName)
         if (res != 0) {
             mPlayer = MediaPlayer.create(currentContext, res)
+        }
+    }
+
+    fun setCameraPreShutterSound(value: String?) {
+        if (value == null) {
+            clearPreShutterPlayer()
+            return
+        }
+        val res = currentContext.resources.getIdentifier(value, "raw", currentContext.packageName)
+        if (res != 0) {
+            mPreShutterPlayer = MediaPlayer.create(currentContext, res)
         }
     }
 
