@@ -274,7 +274,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         return zoomOrDefault
     }
 
-    @OptIn(ExperimentalZeroShutterLag::class)
+//    @OptIn(ExperimentalZeroShutterLag::class)
     private fun bindCameraUseCases() {
         if (viewFinder.display == null) return
         // Get screen metrics used to setup camera for full screen resolution
@@ -302,7 +302,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         // ImageCapture
         imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
+//            .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             // We request aspect ratio but no resolution to match preview config, but letting
             // CameraX optimize for whatever specific resolution best fits our use cases
             .setTargetAspectRatio(aspectRatio)
@@ -408,6 +409,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 out.canonicalPath
 
             }
+
             else -> {
                 val out = File.createTempFile("ckcap", ".jpg", context.cacheDir)
                 out.deleteOnExit()
@@ -446,11 +448,13 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
                 override fun onCaptureStarted() {
                     super.onCaptureStarted()
-                    Log.d(TAG,"Capture started")
+                    Log.d(TAG, "Capture started")
+                    onCaptureStartedCallback()
                     flashViewFinder()
 
                     if (shutterPhotoSound) {
-                        val audio = getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                        val audio =
+                            getActivity().getSystemService(Context.AUDIO_SERVICE) as AudioManager
                         if (audio.ringerMode == AudioManager.RINGER_MODE_NORMAL) {
                             if (mPlayer != null) {
                                 try {
@@ -549,6 +553,13 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         UIManagerHelper
             .getEventDispatcherForReactTag(currentContext, id)
             ?.dispatchEvent(OrientationChangeEvent(surfaceId, id, remappedOrientation))
+    }
+
+    private fun onCaptureStartedCallback() {
+        val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
+        UIManagerHelper
+            .getEventDispatcherForReactTag(currentContext, id)
+            ?.dispatchEvent(CaptureStartedEvent(surfaceId, id))
     }
 
     private fun onPictureTaken(uri: String) {

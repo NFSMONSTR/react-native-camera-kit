@@ -60,7 +60,9 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
             ZoomEvent.EVENT_NAME,
             MapBuilder.of("registrationName", "onZoom"),
             ErrorEvent.EVENT_NAME,
-            MapBuilder.of("registrationName", "onError")
+            MapBuilder.of("registrationName", "onError"),
+            CaptureStartedEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onCaptureStarted")
         )
     }
 
