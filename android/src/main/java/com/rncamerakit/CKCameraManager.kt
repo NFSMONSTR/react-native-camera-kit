@@ -62,7 +62,11 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
             ErrorEvent.EVENT_NAME,
             MapBuilder.of("registrationName", "onError"),
             CaptureStartedEvent.EVENT_NAME,
-            MapBuilder.of("registrationName", "onCaptureStarted")
+            MapBuilder.of("registrationName", "onCaptureStarted"),
+            CaptureButtonPressInEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onCaptureButtonPressIn"),
+            CaptureButtonPressOutEvent.EVENT_NAME,
+            MapBuilder.of("registrationName", "onCaptureButtonPressOut")
         )
     }
 

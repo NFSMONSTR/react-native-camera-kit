@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.hardware.SensorManager
 import android.media.AudioManager
@@ -120,6 +121,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             LayoutParams.MATCH_PARENT,
             LayoutParams.MATCH_PARENT
         )
+        viewFinder.setFocusableInTouchMode(true)
+        viewFinder.requestFocusFromTouch()
         installHierarchyFitter(viewFinder)
         addView(viewFinder)
         viewFinder.scaleType = resizeMode
@@ -142,6 +145,22 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         cameraExecutor.shutdown()
         orientationListener?.disable()
         cameraProvider?.unbindAll()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        val keyCode = event?.getKeyCode()
+        val action = event?.getAction()
+
+        if (keyCode == KeyEvent.KEYCODE_CAMERA || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            if (action == KeyEvent.ACTION_DOWN) {
+                onCaptureButtonPressIn(keyCode)
+                return true
+            } else if (action == KeyEvent.ACTION_UP) {
+                onCaptureButtonPressOut(keyCode)
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     // If this is not called correctly, view finder will be black/blank
@@ -322,9 +341,34 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         val useCases = mutableListOf(preview, imageCapture)
 
         if (scanBarcode) {
-            val analyzer = QRCodeAnalyzer { barcodes ->
-                if (barcodes.isNotEmpty()) {
+            val analyzer = QRCodeAnalyzer { barcodes, imageSize ->
+                if (barcodes.isEmpty()) {
+                    return@QRCodeAnalyzer
+                }
+
+                val barcodeFrame = barcodeFrame;
+                if (barcodeFrame == null) {
                     onBarcodeRead(barcodes)
+                    return@QRCodeAnalyzer
+                }
+
+                // Calculate scaling factors (image is always rotated by 90 degrees)
+                val scaleX = viewFinder.width.toFloat() / imageSize.height
+                val scaleY = viewFinder.height.toFloat() / imageSize.width
+
+                val filteredBarcodes = barcodes.filter { barcode ->
+                    val barcodeBoundingBox = barcode.boundingBox ?: return@filter false;
+                    val scaledBarcodeBoundingBox = Rect(
+                        (barcodeBoundingBox.left * scaleX).toInt(),
+                        (barcodeBoundingBox.top * scaleY).toInt(),
+                        (barcodeBoundingBox.right * scaleX).toInt(),
+                        (barcodeBoundingBox.bottom * scaleY).toInt()
+                    )
+                    barcodeFrame.frameRect.contains(scaledBarcodeBoundingBox)
+                }
+
+                if (filteredBarcodes.isNotEmpty()) {
+                    onBarcodeRead(filteredBarcodes)
                 }
             }
             imageAnalyzer!!.setAnalyzer(cameraExecutor, analyzer)
@@ -568,6 +612,21 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             .getEventDispatcherForReactTag(currentContext, id)
             ?.dispatchEvent(PictureTakenEvent(surfaceId, id, uri))
     }
+
+    private fun onCaptureButtonPressIn(keyCode: Int) {
+        val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
+        UIManagerHelper
+            .getEventDispatcherForReactTag(currentContext, id)
+            ?.dispatchEvent(CaptureButtonPressInEvent(surfaceId, id, keyCode))
+    }
+
+    private fun onCaptureButtonPressOut(keyCode: Int) {
+        val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
+        UIManagerHelper
+            .getEventDispatcherForReactTag(currentContext, id)
+            ?.dispatchEvent(CaptureButtonPressOutEvent(surfaceId, id, keyCode))
+    }
+
 
     fun setFlashMode(mode: String?) {
         val imageCapture = imageCapture ?: return
