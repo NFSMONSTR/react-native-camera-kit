@@ -106,6 +106,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var mPlayer: MediaPlayer? = null
     private var mPreShutterPlayer: MediaPlayer? = null
     private var jpegQuality: Int = 95
+    private var useCaptureButtons: Boolean = false
 
     // Barcode Props
     private var scanBarcode: Boolean = false
@@ -148,6 +149,10 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     }
 
     override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+        if (!useCaptureButtons) {
+            return super.dispatchKeyEvent(event)
+        }
+
         val keyCode = event?.getKeyCode()
         val action = event?.getAction()
 
@@ -838,6 +843,10 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         if (res != 0) {
             mPreShutterPlayer = MediaPlayer.create(currentContext, res)
         }
+    }
+
+    fun setUseCaptureButtons(value: Boolean) {
+        useCaptureButtons = value
     }
 
     private fun convertDeviceHeightToSupportedAspectRatio(

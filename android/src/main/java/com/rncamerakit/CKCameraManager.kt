@@ -159,6 +159,11 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
         view.setCameraShutterSound(value)
     }
 
+    @ReactProp(name = "useCaptureButtons")
+    override fun setUseCaptureButtons(view: CKCamera, value: Boolean) {
+        view.setUseCaptureButtons(value)
+    }
+
     override fun setScanThrottleDelay(view: CKCamera?, value: Int) = Unit
 
     @ReactProp(name = "jpegQuality")

@@ -31,6 +31,7 @@ public interface CKCameraManagerInterface<T extends View> {
   void setResizeMode(T view, @Nullable String value);
   void setScanThrottleDelay(T view, int value);
   void setShutterPhotoSound(T view, boolean value);
+  void setUseCaptureButtons(T view, boolean value);
   void setOutputPath(T view, @Nullable String value);
   void setCameraShutterSound(T view, @Nullable String value);
   void setCameraAspectRatio(T view, @Nullable String value);

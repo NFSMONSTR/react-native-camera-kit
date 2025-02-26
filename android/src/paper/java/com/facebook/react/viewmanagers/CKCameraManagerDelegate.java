@@ -12,11 +12,10 @@ package com.facebook.react.viewmanagers;
 import android.view.View;
 import androidx.annotation.Nullable;
 import com.facebook.react.bridge.ColorPropConverter;
-import com.facebook.react.uimanager.BaseViewManager;
 import com.facebook.react.uimanager.BaseViewManagerDelegate;
-import com.facebook.react.uimanager.LayoutShadowNode;
+import com.facebook.react.uimanager.BaseViewManagerInterface;
 
-public class CKCameraManagerDelegate<T extends View, U extends BaseViewManager<T, ? extends LayoutShadowNode> & CKCameraManagerInterface<T>> extends BaseViewManagerDelegate<T, U> {
+public class CKCameraManagerDelegate<T extends View, U extends BaseViewManagerInterface<T> & CKCameraManagerInterface<T>> extends BaseViewManagerDelegate<T, U> {
   public CKCameraManagerDelegate(U viewManager) {
     super(viewManager);
   }
@@ -76,6 +75,9 @@ public class CKCameraManagerDelegate<T extends View, U extends BaseViewManager<T
         break;
       case "shutterPhotoSound":
         mViewManager.setShutterPhotoSound(view, value == null ? false : (boolean) value);
+        break;
+      case "useCaptureButtons":
+        mViewManager.setUseCaptureButtons(view, value == null ? false : (boolean) value);
         break;
       case "outputPath":
         mViewManager.setOutputPath(view, value == null ? null : (String) value);

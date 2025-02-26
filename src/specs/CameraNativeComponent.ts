@@ -42,6 +42,7 @@ export interface NativeProps extends ViewProps {
   scanThrottleDelay?: Int32;
   shutterPhotoSound?: boolean;
   onCaptureStarted?: DirectEventHandler<{}>;
+  useCaptureButtons?: boolean;
   onCaptureButtonPressIn?: DirectEventHandler<{}>;
   onCaptureButtonPressOut?: DirectEventHandler<{}>;
   outputPath?: string;

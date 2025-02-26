@@ -111,6 +111,8 @@ export interface CameraProps extends ViewProps {
   maxPhotoQualityPrioritization?: 'balanced' | 'quality' | 'speed';
   /** **Android only**. Play a shutter capture sound when capturing a photo */
   shutterPhotoSound?: boolean;
+  /** **Android only**. Detect volume buttons for onCaptureButtonPressIn and onCaptureButtonPressOut */
+  useCaptureButtons?: boolean;
   onCaptureButtonPressIn?: ({ nativeEvent: {} }) => void;
   onCaptureButtonPressOut?: ({ nativeEvent: {} }) => void;
   /** **Android only**. Aspect ratio of preview and photo */
