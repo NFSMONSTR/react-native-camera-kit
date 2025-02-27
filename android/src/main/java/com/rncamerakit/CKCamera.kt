@@ -136,6 +136,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         if (hasPermissions()) {
+            viewFinder.setFocusableInTouchMode(true)
+            viewFinder.requestFocusFromTouch()
             viewFinder.post { setupCamera() }
         }
     }
