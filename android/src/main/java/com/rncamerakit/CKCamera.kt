@@ -13,6 +13,13 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.hardware.SensorManager
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.TotalCaptureResult
 import android.media.AudioManager
 import android.media.MediaActionSound
 import android.media.MediaPlayer
@@ -25,16 +32,21 @@ import android.widget.LinearLayout
 import androidx.annotation.ColorInt
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.LifecycleObserver
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.uimanager.ThemedReactContext
 import com.facebook.react.uimanager.UIManagerHelper
+import com.google.android.datatransport.runtime.ExecutionModule_ExecutorFactory.executor
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.rncamerakit.barcode.BarcodeFrame
 import com.rncamerakit.events.*
@@ -45,6 +57,14 @@ import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+
+enum class FocusState {
+    INACTIVE,
+    FOCUSING,
+    FOCUSED,
+    FOCUSED_LOCKED,
+    NOT_FOCUSED
+}
 
 class RectOverlay constructor(context: Context) :
     View(context) {
@@ -327,7 +347,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             .build()
 
         // ImageCapture
-        imageCapture = ImageCapture.Builder()
+        val imageCaptureBuilder = ImageCapture.Builder()
 //            .setCaptureMode(ImageCapture.CAPTURE_MODE_ZERO_SHUTTER_LAG)
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             // We request aspect ratio but no resolution to match preview config, but letting
@@ -337,7 +357,9 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
             // Set initial target rotation, we will have to call this again if rotation changes
             // during the lifecycle of this use case
             .setTargetRotation(rotation)
-            .build()
+        setupFocusMonitoring(imageCaptureBuilder)
+
+        imageCapture = imageCaptureBuilder.build()
 
         // ImageAnalysis
         imageAnalyzer = ImageAnalysis.Builder()
@@ -407,6 +429,76 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 .getEventDispatcherForReactTag(currentContext, id)
                 ?.dispatchEvent(ErrorEvent(surfaceId, id, exc.message))
         }
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    fun setupFocusMonitoring(imageCapture: ImageCapture.Builder) {
+        val camera2Interop = Camera2Interop.Extender(imageCapture)
+
+        // Set up a capture callback to monitor focus state
+        camera2Interop.setCaptureRequestOption(
+            CaptureRequest.CONTROL_AF_MODE,
+            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+        )
+        // You can also monitor through preview
+        setupPreviewFocusMonitoring(camera2Interop)
+    }
+
+    @OptIn(ExperimentalCamera2Interop::class)
+    private fun setupPreviewFocusMonitoring(camera2Interop: Camera2Interop.Extender<ImageCapture>) {
+        // Access Camera2 CameraCaptureSession.CaptureCallback
+        val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+            override fun onCaptureCompleted(
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                result: TotalCaptureResult
+            ) {
+                super.onCaptureCompleted(session, request, result)
+
+                // Check focus state
+                val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+                val afMode = result.get(CaptureResult.CONTROL_AF_MODE)
+
+                when (afState) {
+                    CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
+                        // Autofocus is inactive
+                        Log.d(TAG, "FOCUS STATE: INACTIVE")
+//                        onFocusStateChanged(FocusState.INACTIVE)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
+                        // Currently focusing (passive scan)
+                        Log.d(TAG, "FOCUS STATE: FOCUSING")
+//                        onFocusStateChanged(FocusState.FOCUSING)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
+                        // Passive focus achieved
+                        Log.d(TAG, "FOCUS STATE: FOCUSED")
+//                        onFocusStateChanged(FocusState.FOCUSED)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
+                        // Currently focusing (active scan)
+                        Log.d(TAG, "FOCUS STATE: FOCUSING")
+//                        onFocusStateChanged(FocusState.FOCUSING)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
+                        // Focus achieved and locked
+                        Log.d(TAG, "FOCUS STATE: FOCUSED_LOCKED")
+//                        onFocusStateChanged(FocusState.FOCUSED_LOCKED)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
+                        // Focus not achieved
+                        Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
+//                        onFocusStateChanged(FocusState.NOT_FOCUSED)
+                    }
+                    CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
+                        // Passive focus not achieved
+                        Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
+//                        onFocusStateChanged(FocusState.NOT_FOCUSED)
+                    }
+                }
+            }
+        }
+        camera2Interop.setSessionCaptureCallback(captureCallback)
     }
 
     /**
