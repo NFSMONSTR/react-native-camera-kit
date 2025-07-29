@@ -244,6 +244,12 @@ const CameraExample = ({ onBack }: { onBack: () => void }) => {
               console.log('capture button released');
               onCaptureImagePressed();
             }}
+            onFocusBegin={() => {
+              console.log('focus begin');
+            }}
+            onFocusEnd={() => {
+              console.log('focus end');
+            }}
             onOrientationChange={(e) => {
               // We recommend locking the camera UI to portrait (using a different library)
               // and rotating the UI elements counter to the orientation

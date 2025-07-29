@@ -50,19 +50,17 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
     }
 
     override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-        val builder = MapBuilder.of(
-            OrientationChangeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onOrientationChange"),
-            ReadCodeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onReadCode"),
-            PictureTakenEvent.EVENT_NAME, MapBuilder.of("registrationName", "onPictureTaken"),
-            ZoomEvent.EVENT_NAME, MapBuilder.of("registrationName", "onZoom"),
-            ErrorEvent.EVENT_NAME, MapBuilder.of("registrationName", "onError"),
-            CaptureButtonPressInEvent.EVENT_NAME, MapBuilder.of("registrationName", "onCaptureButtonPressIn"),
-            CaptureButtonPressOutEvent.EVENT_NAME, MapBuilder.of("registrationName", "onCaptureButtonPressOut")
+        return mapOf(OrientationChangeEvent.EVENT_NAME to mapOf("registrationName" to "onOrientationChange"),
+            ReadCodeEvent.EVENT_NAME to mapOf("registrationName" to "onReadCode"),
+            PictureTakenEvent.EVENT_NAME to mapOf("registrationName" to "onPictureTaken"),
+            ZoomEvent.EVENT_NAME to mapOf("registrationName" to "onZoom"),
+            ErrorEvent.EVENT_NAME to mapOf("registrationName" to "onError"),
+            CaptureButtonPressInEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressIn"),
+            CaptureButtonPressOutEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressOut"),
+            CaptureStartedEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureStarted"),
+            FocusBeginEvent.EVENT_NAME to mapOf("registrationName" to "onFocusBegin"),
+            FocusEndEvent.EVENT_NAME to mapOf("registrationName" to "onFocusEnd"),
         )
-
-        builder[CaptureStartedEvent.EVENT_NAME] = MapBuilder.of("registrationName", "onCaptureStarted")
-
-        return builder
     }
 
     @ReactProp(name = "cameraType")

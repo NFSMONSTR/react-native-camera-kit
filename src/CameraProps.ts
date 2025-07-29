@@ -127,4 +127,8 @@ export interface CameraProps extends ViewProps {
   cameraPreShutterSound?: string;
   /** **Android only**. Calls when photo capture really started */
   onCaptureStarted?: () => void;
+  /** **Android only**. Calls when camera begin performing focus */
+  onFocusBegin?: () => void;
+  /** **Android only**. Calls when camera end performing focus */
+  onFocusEnd?: () => void;
 }

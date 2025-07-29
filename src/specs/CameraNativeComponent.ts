@@ -45,6 +45,8 @@ export interface NativeProps extends ViewProps {
   useCaptureButtons?: boolean;
   onCaptureButtonPressIn?: DirectEventHandler<{}>;
   onCaptureButtonPressOut?: DirectEventHandler<{}>;
+  onFocusBegin?: DirectEventHandler<{}>;
+  onFocusEnd?: DirectEventHandler<{}>;
   outputPath?: string;
   cameraShutterSound?: string;
   cameraAspectRatio?: string;

@@ -132,6 +132,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var scanBarcode: Boolean = false
     private var frameColor = Color.GREEN
     private var laserColor = Color.RED
+    private var isFocused = false
 
     private fun getActivity(): Activity {
         return currentContext.currentActivity!!
@@ -444,6 +445,20 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         setupPreviewFocusMonitoring(camera2Interop)
     }
 
+    private fun updateFocusState(state: Boolean) {
+        if (state != isFocused) {
+            isFocused = state
+            val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
+            val event = if (state) FocusBeginEvent(
+                surfaceId,
+                id
+            ) else FocusEndEvent(surfaceId, id)
+            UIManagerHelper
+                .getEventDispatcherForReactTag(currentContext, id)
+                ?.dispatchEvent(event)
+        }
+    }
+
     @OptIn(ExperimentalCamera2Interop::class)
     private fun setupPreviewFocusMonitoring(camera2Interop: Camera2Interop.Extender<ImageCapture>) {
         // Access Camera2 CameraCaptureSession.CaptureCallback
@@ -462,38 +477,38 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 when (afState) {
                     CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
                         // Autofocus is inactive
+                        updateFocusState(false)
                         Log.d(TAG, "FOCUS STATE: INACTIVE")
-//                        onFocusStateChanged(FocusState.INACTIVE)
                     }
                     CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
                         // Currently focusing (passive scan)
+                        updateFocusState(true)
                         Log.d(TAG, "FOCUS STATE: FOCUSING")
-//                        onFocusStateChanged(FocusState.FOCUSING)
                     }
                     CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
                         // Passive focus achieved
+                        updateFocusState(false)
                         Log.d(TAG, "FOCUS STATE: FOCUSED")
-//                        onFocusStateChanged(FocusState.FOCUSED)
                     }
                     CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
                         // Currently focusing (active scan)
+                        updateFocusState(true)
                         Log.d(TAG, "FOCUS STATE: FOCUSING")
-//                        onFocusStateChanged(FocusState.FOCUSING)
                     }
                     CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
                         // Focus achieved and locked
+                        updateFocusState(false)
                         Log.d(TAG, "FOCUS STATE: FOCUSED_LOCKED")
-//                        onFocusStateChanged(FocusState.FOCUSED_LOCKED)
                     }
                     CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
                         // Focus not achieved
+                        updateFocusState(false)
                         Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
-//                        onFocusStateChanged(FocusState.NOT_FOCUSED)
                     }
                     CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
                         // Passive focus not achieved
+                        updateFocusState(false)
                         Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
-//                        onFocusStateChanged(FocusState.NOT_FOCUSED)
                     }
                 }
             }
