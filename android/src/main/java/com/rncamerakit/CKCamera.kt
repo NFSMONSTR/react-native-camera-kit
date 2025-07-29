@@ -674,10 +674,21 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         // Auto-cancel will clear focus points (and engage AF) after a duration
         if (autoFocus == "off") builder.disableAutoCancel()
-
-        camera?.cameraControl?.startFocusAndMetering(builder.build())
+        Log.d(TAG, "Start manual focus")
+        updateFocusState(true);
+        val focusTask = camera?.cameraControl?.startFocusAndMetering(builder.build())
         val focusRects = listOf(RectF(x - 75, y - 75, x + 75, y + 75))
         rectOverlay.drawRectBounds(focusRects)
+        focusTask?.addListener({
+            try {
+                val result = focusTask.get()
+                updateFocusState(false)
+            } catch (e: Exception) {
+                updateFocusState(false)
+            } finally {
+                Log.d(TAG, "Manual focus end")
+            }
+        }, ContextCompat.getMainExecutor(context))
     }
 
     private fun onBarcodeRead(barcodes: List<Barcode>) {
