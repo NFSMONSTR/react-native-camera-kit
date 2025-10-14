@@ -14,9 +14,6 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.hardware.SensorManager
 import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraCharacteristics
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.TotalCaptureResult
@@ -436,12 +433,6 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     fun setupFocusMonitoring(imageCapture: ImageCapture.Builder) {
         val camera2Interop = Camera2Interop.Extender(imageCapture)
 
-        // Set up a capture callback to monitor focus state
-        camera2Interop.setCaptureRequestOption(
-            CaptureRequest.CONTROL_AF_MODE,
-            CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-        )
-        // You can also monitor through preview
         setupPreviewFocusMonitoring(camera2Interop)
     }
 
