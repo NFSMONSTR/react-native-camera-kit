@@ -38,11 +38,8 @@ import androidx.lifecycle.LifecycleObserver
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.uimanager.ThemedReactContext
-import com.facebook.react.uimanager.UIManagerHelper
 import com.google.android.datatransport.runtime.ExecutionModule_ExecutorFactory.executor
-import com.google.mlkit.vision.barcode.common.Barcode
 import com.rncamerakit.barcode.BarcodeFrame
-import com.rncamerakit.events.*
 import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutorService

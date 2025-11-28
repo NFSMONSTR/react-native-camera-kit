@@ -47,14 +47,17 @@ class CKCameraManager(var context: ReactApplicationContext) : SimpleViewManager<
     }
 
     override fun getExportedCustomDirectEventTypeConstants(): Map<String, Any> {
-        return MapBuilder.of(
-            OrientationChangeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onOrientationChange"),
-            ReadCodeEvent.EVENT_NAME, MapBuilder.of("registrationName", "onReadCode"),
-            PictureTakenEvent.EVENT_NAME, MapBuilder.of("registrationName", "onPictureTaken"),
-            ZoomEvent.EVENT_NAME, MapBuilder.of("registrationName", "onZoom"),
-            ErrorEvent.EVENT_NAME, MapBuilder.of("registrationName", "onError"),
-            CaptureButtonPressInEvent.EVENT_NAME, MapBuilder.of("registrationName", "onCaptureButtonPressIn"),
-            CaptureButtonPressOutEvent.EVENT_NAME, MapBuilder.of("registrationName", "onCaptureButtonPressOut")
+        return mapOf(
+            OrientationChangeEvent.EVENT_NAME to mapOf("registrationName" to "onOrientationChange"),
+            ReadCodeEvent.EVENT_NAME to mapOf("registrationName" to "onReadCode"),
+            PictureTakenEvent.EVENT_NAME to mapOf("registrationName" to "onPictureTaken"),
+            ZoomEvent.EVENT_NAME to mapOf("registrationName" to "onZoom"),
+            ErrorEvent.EVENT_NAME to mapOf("registrationName" to "onError"),
+            CaptureButtonPressInEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressIn"),
+            CaptureButtonPressOutEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressOut"),
+            CaptureStartedEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureStarted"),
+            FocusBeginEvent.EVENT_NAME to mapOf("registrationName" to "onFocusBegin"),
+            FocusEndEvent.EVENT_NAME to mapOf("registrationName" to "onFocusEnd"),
         )
     }
 
@@ -143,6 +146,36 @@ class CKCameraManager(var context: ReactApplicationContext) : SimpleViewManager<
         view?.setScanThrottleDelay(value)
     }
 
+    @ReactProp(name = "resizeMode")
+    fun setResizeMode(view: CKCamera, value: String?) {
+        view.setResizeMode(value)
+    }
+
+    @ReactProp(name = "cameraAspectRatio")
+    fun setCameraAspectRatio(view: CKCamera, value: String?) {
+        view.setCameraAspectRatio(value ?: "16:9")
+    }
+
+    @ReactProp(name = "cameraShutterSound")
+    fun setCameraShutterSound(view: CKCamera, value: String?) {
+        view.setCameraShutterSound(value)
+    }
+
+    @ReactProp(name = "useCaptureButtons")
+    fun setUseCaptureButtons(view: CKCamera, value: Boolean) {
+        view.setUseCaptureButtons(value)
+    }
+
+    @ReactProp(name = "jpegQuality")
+    fun setJpegQuality(view: CKCamera?, value: Int) {
+        view?.setJpegQuality(value)
+    }
+
+    @ReactProp(name = "cameraPreShutterSound")
+    fun setCameraPreShutterSound(view: CKCamera, value: String?) {
+        view.setCameraPreShutterSound(value)
+    }
+
     // Methods only available on iOS
     fun setRatioOverlay(view: CKCamera?, value: String?) = Unit
 
@@ -151,8 +184,6 @@ class CKCameraManager(var context: ReactApplicationContext) : SimpleViewManager<
     fun setResetFocusTimeout(view: CKCamera?, value: Int) = Unit
 
     fun setResetFocusWhenMotionDetected(view: CKCamera?, value: Boolean) = Unit
-
-    fun setResizeMode(view: CKCamera?, value: String?) = Unit
 
     fun setMaxPhotoQualityPrioritization(view: CKCamera?, value: String?) = Unit
 }
