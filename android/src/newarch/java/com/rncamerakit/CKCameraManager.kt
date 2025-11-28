@@ -2,8 +2,11 @@ package com.rncamerakit
 
 import android.graphics.Color
 import android.util.Log
+import android.util.Size
 import androidx.annotation.ColorInt
+import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.ReadableType
 import com.facebook.react.common.MapBuilder
 import com.facebook.react.common.ReactConstants.TAG
@@ -13,10 +16,10 @@ import com.facebook.react.uimanager.ViewManagerDelegate
 import com.facebook.react.uimanager.annotations.ReactProp
 import com.facebook.react.viewmanagers.CKCameraManagerDelegate
 import com.facebook.react.viewmanagers.CKCameraManagerInterface
+
 import com.rncamerakit.events.*
 
-class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<CKCamera> {
-
+class CKCameraManager(context: ReactApplicationContext) : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<CKCamera> {
     private val delegate: ViewManagerDelegate<CKCamera> = CKCameraManagerDelegate(this)
 
     override fun getDelegate(): ViewManagerDelegate<CKCamera> = delegate
@@ -118,6 +121,16 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
         view.setFrameColor(color ?: Color.GREEN)
     }
 
+    @ReactProp(name = "barcodeFrameSize")
+    override fun setBarcodeFrameSize(view: CKCamera, frameSize: ReadableMap?) {
+        if (frameSize == null || !frameSize.hasKey("width") || !frameSize.hasKey("height")) {
+            return
+        }
+        val width = frameSize.getInt("width")
+        val height = frameSize.getInt("height")
+        view.setBarcodeFrameSize(Size(width, height))
+    }
+
     @ReactProp(name = "outputPath")
     override fun setOutputPath(view: CKCamera, path: String?) {
         view.setOutputPath(path ?: "")
@@ -133,6 +146,11 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
         view.setShutterPhotoSound(enabled);
     }
 
+    @ReactProp(name = "scanThrottleDelay")
+    override fun setScanThrottleDelay(view: CKCamera?, value: Int) {
+        view?.setScanThrottleDelay(value)
+    }
+
     // Methods only available on iOS
     override fun setRatioOverlay(view: CKCamera?, value: String?) = Unit
 
@@ -141,6 +159,8 @@ class CKCameraManager : SimpleViewManager<CKCamera>(), CKCameraManagerInterface<
     override fun setResetFocusTimeout(view: CKCamera?, value: Int) = Unit
 
     override fun setResetFocusWhenMotionDetected(view: CKCamera?, value: Boolean) = Unit
+
+    override fun setMaxPhotoQualityPrioritization(view: CKCamera?, value: String?) = Unit
 
     @ReactProp(name = "resizeMode")
     override fun setResizeMode(view: CKCamera, value: String?) {

@@ -57,7 +57,8 @@ https://github.com/zoontek/react-native-permissions#ios-flow
 Conceptually, permissions are simple: Granted / Denied.  
 However, in reality it's not that simple due to privacy enhancements on iOS and Android.
 
-[Here's an example diagram from react-native-permissions's README](https://github.com/zoontek/react-native-permissions#ios-flow), which illustrates the complexity of the user-experience, which we don't want to duplicate in a camera library:
+[Here's an example diagram from react-native-permissions's README](https://github.com/zoontek/react-native-permissions#ios-flow),
+which illustrates the complexity of the user-experience, which we don't want to duplicate in a camera library:
 
 ```
    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -108,7 +109,8 @@ However, in reality it's not that simple due to privacy enhancements on iOS and 
           └─────────────────┘
 ```
 
-In earlier versions of react-native-camera-kit, permissions were provided with an API, but for the above reasons, these APIs will be removed.
+In earlier versions of react-native-camera-kit, permissions were provided with an API, but for the above reasons, these
+APIs will be removed.
 
 #### Android
 
@@ -196,8 +198,8 @@ Additionally, the Camera can be used for barcode scanning
 | `jpegQuality`                   | `1-100`                                | Android only. Jpeg image quality.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `onCaptureStarted`              | Function                               | Android only. Callback when camera really started taking photo                                                                                                                                                                                                                                                                                                                                                                                             |
 | `useCaptureButtons`             | `boolean`                              | Android only. Detect volume buttons for onCaptureButtonPressIn and onCaptureButtonPressOut. Default = false                                                                                                                                                                                                                                                                                                                                                |
-| `onFocusBegin`                  | Function                               | Android only. Calls when camera begin performing focus                                                                                                                                                                                                                                                                                                                                                |
-| `onFocusEnd`                    | Function                               | Android only. Calls when camera end performing focus                                                                                                                                                                                                                                                                                                                                                |
+| `onFocusBegin`                  | Function                               | Android only. Calls when camera begin performing focus                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `onFocusEnd`                    | Function                               | Android only. Calls when camera end performing focus                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **iOS only**                    |
 | `ratioOverlay`                  | `'int:int'`                            | Show a guiding overlay in the camera preview for the selected ratio. Does not crop image as of v9.0. Example: `'16:9'`                                                                                                                                                                                                                                                                                                                                     |
 | `ratioOverlayColor`             | Color                                  | Any color with alpha. Default: `'#ffffff77'`                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -205,11 +207,12 @@ Additionally, the Camera can be used for barcode scanning
 | `resetFocusWhenMotionDetected`  | Boolean                                | Dismiss tap to focus when focus area content changes. Native iOS feature, see documentation: https://developer.apple.com/documentation/avfoundation/avcapturedevice/1624644-subjectareachangemonitoringenabl?language=objc). Default `true`.                                                                                                                                                                                                               |
 | `scanThrottleDelay`             | `number`                               | Duration between scan detection in milliseconds. Default 2000 (2s)                                                                                                                                                                                                                                                                                                                                                                                         |
 | `maxPhotoQualityPrioritization` | `'balanced'` / `'quality'` / `'speed'` | [iOS 13 and newer](https://developer.apple.com/documentation/avfoundation/avcapturephotooutput/3182995-maxphotoqualityprioritization). `'speed'` provides a 60-80% median capture time reduction vs 'quality' setting. Tested on iPhone 6S Max (66% faster) and iPhone 15 Pro Max (76% faster!). Default `balanced`                                                                                                                                        |
-| `onCaptureButtonPressIn`        | Function                               | Callback when iPhone capture button is pressed in. Ex: `onCaptureButtonPressIn={() => console.log("volume button pressed in")}`                                                                                                                                                                                                                                                                                                                            |
-| `onCaptureButtonPressOut`       | Function                               | Callback when iPhone capture button is released. Ex: `onCaptureButtonPressOut={() => console.log("volume button released")}`                                                                                                                                                                                                                                                                                                                               |
+| `onCaptureButtonPressIn`        | Function                               | Callback when iPhone capture button is pressed in or Android volume or camera button is pressed in. Ex: `onCaptureButtonPressIn={() => console.log("volume button pressed in")}`                                                                                                                                                                                                                                                                           |
+| `onCaptureButtonPressOut`       | Function                               | Callback when iPhone capture button is released or Android volume or camera button is released. Ex: `onCaptureButtonPressOut={() => console.log("volume button released")}`                                                                                                                                                                                                                                                                                |
 | **Barcode only**                |
 | `scanBarcode`                   | `boolean`                              | Enable barcode scanner. Default: `false`                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `showFrame`                     | `boolean`                              | Show frame in barcode scanner. Default: `false`                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `barcodeFrameSize`              | `object`                               | Frame size of barcode scanner. Default: `{ width: 300, height: 150 }`                                                                                                                                                                                                                                                                                                                                                                                      |
 | `laserColor`                    | Color                                  | Color of barcode scanner laser visualization. Default: `red`                                                                                                                                                                                                                                                                                                                                                                                               |
 | `frameColor`                    | Color                                  | Color of barcode scanner frame visualization. Default: `yellow`                                                                                                                                                                                                                                                                                                                                                                                            |
 | `onReadCode`                    | Function                               | Callback when scanner successfully reads barcode. Returned event contains `codeStringValue`. Default: `null`. Ex: `onReadCode={(event) => console.log(event.nativeEvent.codeStringValue)}`                                                                                                                                                                                                                                                                 |
@@ -222,17 +225,22 @@ _Note: Must be called on a valid camera ref_
 
 Capture image as JPEG.
 
-A temporary file is created. You _must_ move this file to a permanent location (e.g. the app's 'Documents' folder) if you need it beyond the current session of the app as it may be deleted when the user leaves the app. You can move files by using a file system library such as [react-native-fs](https://github.com/itinance/react-native-fs) or [expo-filesystem](https://docs.expo.io/versions/latest/sdk/filesystem/).
+A temporary file is created. You _must_ move this file to a permanent location (e.g. the app's 'Documents' folder) if
+you need it beyond the current session of the app as it may be deleted when the user leaves the app. You can move files
+by using a file system library such as [react-native-fs](https://github.com/itinance/react-native-fs)
+or [expo-filesystem](https://docs.expo.io/versions/latest/sdk/filesystem/).
 (On Android we currently have an unsupported `outputPath` prop but it's subject to change at any time).
 
-Note that the reason you're getting a URL despite it being a file is because Android 10+ encourages URIs. To keep things consistent regardless of settings or platform we always send back a URI.
+Note that the reason you're getting a URL despite it being a file is because Android 10+ encourages URIs. To keep things
+consistent regardless of settings or platform we always send back a URI.
 
 ```ts
 const { uri } = await this.camera.capture();
 // uri = 'file:///data/user/0/com.myorg.myapp/cache/ckcap123123123123.jpg'
 ```
 
-If you want to store it permanently, here's an example using [react-native-fs](https://github.com/itinance/react-native-fs):
+If you want to store it permanently, here's an example
+using [react-native-fs](https://github.com/itinance/react-native-fs):
 
 ```ts
 import RNFS from 'react-native-fs';
@@ -255,7 +263,8 @@ if (uri.startsWith('file://')) {
 
 ## Using with Expo
 
-If you are using Expo Managed Workflow, you can use this library with a third-party plugin `expo-react-native-camera-kit`.
+If you are using Expo Managed Workflow, you can use this library with a third-party plugin
+`expo-react-native-camera-kit`.
 
 [See more here](https://github.com/avantstay/expo-react-native-camera-kit)
 
