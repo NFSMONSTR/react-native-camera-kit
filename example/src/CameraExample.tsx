@@ -45,6 +45,7 @@ const CameraExample = ({ onBack }: { onBack: () => void }) => {
   const [zoom, setZoom] = useState<number | undefined>();
   const [orientationAnim] = useState(new Animated.Value(3));
   const [resize, setResize] = useState<'contain' | 'cover'>('contain');
+  const [focusPosition, setFocusPosition] = useState<{left: number, top: number, width: number, height: number} | null>(null);
 
   // iOS will error out if capturing too fast,
   // so block capturing until the current capture is done
@@ -222,62 +223,77 @@ const CameraExample = ({ onBack }: { onBack: () => void }) => {
             <Image source={{ uri: showImageUri }} style={styles.cameraPreview} />
           </ScrollView>
         ) : (
-          <Camera
-            ref={cameraRef}
-            style={styles.cameraPreview}
-            cameraType={cameraType}
-            flashMode={flashData?.mode}
-            resizeMode={resize}
-            resetFocusWhenMotionDetected
-            zoom={zoom}
-            maxZoom={10}
-            onZoom={(e) => {
-              console.log('zoom', e.nativeEvent.zoom);
-              setZoom(e.nativeEvent.zoom);
-            }}
-            torchMode={torchMode ? 'on' : 'off'}
-            shutterPhotoSound
-            maxPhotoQualityPrioritization="speed"
-            onCaptureButtonPressIn={() => {
-              console.log('capture button pressed in');
-            }}
-            onCaptureButtonPressOut={() => {
-              console.log('capture button released');
-              onCaptureImagePressed();
-            }}
-            onFocusBegin={() => {
-              console.log('focus begin');
-            }}
-            onFocusEnd={() => {
-              console.log('focus end');
-            }}
-            onOrientationChange={(e) => {
-              // We recommend locking the camera UI to portrait (using a different library)
-              // and rotating the UI elements counter to the orientation
-              // However, we include onOrientationChange so you can match your UI to what the camera does
-              switch (e.nativeEvent.orientation) {
-                case Orientation.PORTRAIT_UPSIDE_DOWN:
-                  console.log('orientationChange', 'PORTRAIT_UPSIDE_DOWN');
-                  rotateUiTo(1);
-                  break;
-                case Orientation.LANDSCAPE_LEFT:
-                  console.log('orientationChange', 'LANDSCAPE_LEFT');
-                  rotateUiTo(2);
-                  break;
-                case Orientation.PORTRAIT:
-                  console.log('orientationChange', 'PORTRAIT');
-                  rotateUiTo(3);
-                  break;
-                case Orientation.LANDSCAPE_RIGHT:
-                  console.log('orientationChange', 'LANDSCAPE_RIGHT');
-                  rotateUiTo(4);
-                  break;
-                default:
-                  console.log('orientationChange', e.nativeEvent);
-                  break;
-              }
-            }}
-          />
+          <View style={styles.cameraPreview}>
+            <Camera
+              ref={cameraRef}
+              style={styles.cameraPreview}
+              cameraType={cameraType}
+              cameraAspectRatio={'4:3'}
+              flashMode={flashData?.mode}
+              resizeMode={resize}
+              resetFocusWhenMotionDetected
+              zoom={zoom}
+              maxZoom={10}
+              onZoom={(e) => {
+                console.log('zoom', e.nativeEvent.zoom);
+                setZoom(e.nativeEvent.zoom);
+              }}
+              torchMode={torchMode ? 'on' : 'off'}
+              shutterPhotoSound
+              maxPhotoQualityPrioritization="speed"
+              onCaptureButtonPressIn={() => {
+                console.log('capture button pressed in');
+              }}
+              onCaptureButtonPressOut={() => {
+                console.log('capture button released');
+                onCaptureImagePressed();
+              }}
+              onFocusRectChanged={(e) => {
+                const newRect = e.nativeEvent;
+                if (newRect?.x === undefined || newRect?.y === undefined || newRect?.height === undefined || newRect?.width === undefined) {
+                  setFocusPosition(null);
+                  return;
+                }
+
+                const pointX = newRect?.x + newRect?.width / 2;
+                const pointY = newRect?.y + newRect?.height / 2;
+                const rectSize = 50;
+                setFocusPosition({
+                  left: pointX - rectSize / 2,
+                  top: pointY - rectSize / 2,
+                  width: rectSize,
+                  height: rectSize,
+                });
+              }}
+              onOrientationChange={(e) => {
+                // We recommend locking the camera UI to portrait (using a different library)
+                // and rotating the UI elements counter to the orientation
+                // However, we include onOrientationChange so you can match your UI to what the camera does
+                switch (e.nativeEvent.orientation) {
+                  case Orientation.PORTRAIT_UPSIDE_DOWN:
+                    console.log('orientationChange', 'PORTRAIT_UPSIDE_DOWN');
+                    rotateUiTo(1);
+                    break;
+                  case Orientation.LANDSCAPE_LEFT:
+                    console.log('orientationChange', 'LANDSCAPE_LEFT');
+                    rotateUiTo(2);
+                    break;
+                  case Orientation.PORTRAIT:
+                    console.log('orientationChange', 'PORTRAIT');
+                    rotateUiTo(3);
+                    break;
+                  case Orientation.LANDSCAPE_RIGHT:
+                    console.log('orientationChange', 'LANDSCAPE_RIGHT');
+                    rotateUiTo(4);
+                    break;
+                  default:
+                    console.log('orientationChange', e.nativeEvent);
+                    break;
+                }
+              }}
+            />
+            {focusPosition ? <View style={[{position: 'absolute', borderWidth: 1, borderColor: 'white'}, focusPosition]}/>: null}
+          </View>
         )}
       </View>
 

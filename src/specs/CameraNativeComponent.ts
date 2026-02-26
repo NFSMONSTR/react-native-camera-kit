@@ -25,6 +25,13 @@ type OnZoom = {
     zoom: Double;
 }
 
+type OnFocusRectChanged = {
+    x?: Double;
+    y?: Double;
+    width?: Double;
+    height?: Double;
+}
+
 // We have to use -1 until RN Fabric (New Arch for view components) supports optional values:
 // https://github.com/facebook/react-native/issues/49920#issuecomment-3237917813
 export interface NativeProps extends ViewProps {
@@ -56,8 +63,7 @@ export interface NativeProps extends ViewProps {
   useCaptureButtons?: boolean;
   onCaptureButtonPressIn?: DirectEventHandler<{}>;
   onCaptureButtonPressOut?: DirectEventHandler<{}>;
-  onFocusBegin?: DirectEventHandler<{}>;
-  onFocusEnd?: DirectEventHandler<{}>;
+  onFocusRectChanged?: DirectEventHandler<OnFocusRectChanged>;
   outputPath?: string;
   cameraShutterSound?: string;
   cameraAspectRatio?: string;

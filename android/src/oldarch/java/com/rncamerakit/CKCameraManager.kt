@@ -56,8 +56,7 @@ class CKCameraManager(var context: ReactApplicationContext) : SimpleViewManager<
             CaptureButtonPressInEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressIn"),
             CaptureButtonPressOutEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureButtonPressOut"),
             CaptureStartedEvent.EVENT_NAME to mapOf("registrationName" to "onCaptureStarted"),
-            FocusBeginEvent.EVENT_NAME to mapOf("registrationName" to "onFocusBegin"),
-            FocusEndEvent.EVENT_NAME to mapOf("registrationName" to "onFocusEnd"),
+            FocusRectChangedEvent.EVENT_NAME to mapOf("registrationName" to "onFocusRectChanged")
         )
     }
 

@@ -52,17 +52,10 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.util.Size
+import android.util.TypedValue
 import com.facebook.react.uimanager.UIManagerHelper
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.rncamerakit.events.*
-
-enum class FocusState {
-    INACTIVE,
-    FOCUSING,
-    FOCUSED,
-    FOCUSED_LOCKED,
-    NOT_FOCUSED
-}
 
 class RectOverlay constructor(context: Context) :
     View(context) {
@@ -70,8 +63,12 @@ class RectOverlay constructor(context: Context) :
     private val rectBounds: MutableList<RectF> = mutableListOf()
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, android.R.color.holo_green_light)
-        strokeWidth = 5f
+        color = ContextCompat.getColor(context, android.R.color.holo_orange_light)
+        strokeWidth = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            1f,
+            context.resources.displayMetrics
+        )
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -131,8 +128,12 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     private var scanThrottleDelay: Long = 2000L
     private var frameColor = Color.GREEN
     private var laserColor = Color.RED
-    private var isFocused = false
     private var barcodeFrameSize: Size? = null
+
+    // Focus props
+    private var focusRect: FocusRect? = null
+    private var focusConverter: FocusConverter? = null
+
 
     private fun getActivity(): Activity {
         return currentContext.currentActivity!!
@@ -321,7 +322,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         return zoomOrDefault
     }
 
-//    @OptIn(ExperimentalZeroShutterLag::class)
+    //    @OptIn(ExperimentalZeroShutterLag::class)
     private fun bindCameraUseCases() {
         if (viewFinder.display == null) return
         // Get screen metrics used to setup camera for full screen resolution
@@ -370,8 +371,8 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         val useCases = mutableListOf(preview, imageCapture)
 
-    if (scanBarcode) {
-        val analyzer = QRCodeAnalyzer(analyzerBlock@{ barcodes, imageSize ->
+        if (scanBarcode) {
+            val analyzer = QRCodeAnalyzer(analyzerBlock@{ barcodes, imageSize ->
                 if (barcodes.isEmpty()) {
                     return@analyzerBlock
                 }
@@ -430,28 +431,63 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 .getEventDispatcherForReactTag(currentContext, id)
                 ?.dispatchEvent(ErrorEvent(surfaceId, id, exc.message))
         }
+        val cameraInfo = camera?.cameraInfo
+        if (cameraInfo != null) {
+            focusConverter = FocusConverter(
+                context,
+                aspectRatio,
+                resizeMode,
+                lensType == CameraSelector.LENS_FACING_FRONT,
+                cameraInfo,
+                viewFinder
+            )
+        }
     }
 
     @OptIn(ExperimentalCamera2Interop::class)
     fun setupFocusMonitoring(imageCapture: ImageCapture.Builder) {
         val camera2Interop = Camera2Interop.Extender(imageCapture)
-
         setupPreviewFocusMonitoring(camera2Interop)
     }
 
-    private fun updateFocusState(state: Boolean) {
-        if (state != isFocused) {
-            isFocused = state
-            val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
-            val event = if (state) FocusBeginEvent(
-                surfaceId,
-                id
-            ) else FocusEndEvent(surfaceId, id)
-            UIManagerHelper
-                .getEventDispatcherForReactTag(currentContext, id)
-                ?.dispatchEvent(event)
+    private fun handleFocusRectChange(rect: FocusRect?) {
+        if (focusRect?.equals(rect) == true) {
+            return
         }
+        focusRect = rect
+
+        val surfaceId = UIManagerHelper.getSurfaceId(currentContext)
+        val event = FocusRectChangedEvent(
+            surfaceId,
+            id,
+            rect?.x,
+            rect?.y,
+            rect?.width,
+            rect?.height
+        )
+        UIManagerHelper
+            .getEventDispatcherForReactTag(currentContext, id)
+            ?.dispatchEvent(event)
+
+
     }
+
+    private fun handleCaptureRequestChange(result: CaptureResult, isCompleted: Boolean) {
+        //val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+        //val afMode = result.get(CaptureResult.CONTROL_AF_MODE)
+        val afRegion = result.get(CaptureResult.CONTROL_AF_REGIONS)
+
+        if (isCompleted) {
+            if (afRegion != null && afRegion.size > 0) {
+                val region = afRegion?.maxByOrNull { it.meteringWeight }
+                handleFocusRectChange(focusConverter?.sensorToPreview(region))
+            } else {
+                handleFocusRectChange(null)
+            }
+        }
+
+    }
+
 
     @OptIn(ExperimentalCamera2Interop::class)
     private fun setupPreviewFocusMonitoring(camera2Interop: Camera2Interop.Extender<ImageCapture>) {
@@ -463,48 +499,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                 result: TotalCaptureResult
             ) {
                 super.onCaptureCompleted(session, request, result)
-
-                // Check focus state
-                val afState = result.get(CaptureResult.CONTROL_AF_STATE)
-                val afMode = result.get(CaptureResult.CONTROL_AF_MODE)
-
-                when (afState) {
-                    CaptureResult.CONTROL_AF_STATE_INACTIVE -> {
-                        // Autofocus is inactive
-                        updateFocusState(false)
-                        Log.d(TAG, "FOCUS STATE: INACTIVE")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> {
-                        // Currently focusing (passive scan)
-                        updateFocusState(true)
-                        Log.d(TAG, "FOCUS STATE: FOCUSING")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> {
-                        // Passive focus achieved
-                        updateFocusState(false)
-                        Log.d(TAG, "FOCUS STATE: FOCUSED")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> {
-                        // Currently focusing (active scan)
-                        updateFocusState(true)
-                        Log.d(TAG, "FOCUS STATE: FOCUSING")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> {
-                        // Focus achieved and locked
-                        updateFocusState(false)
-                        Log.d(TAG, "FOCUS STATE: FOCUSED_LOCKED")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> {
-                        // Focus not achieved
-                        updateFocusState(false)
-                        Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
-                    }
-                    CaptureResult.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> {
-                        // Passive focus not achieved
-                        updateFocusState(false)
-                        Log.d(TAG, "FOCUS STATE: NOT_FOCUSED")
-                    }
-                }
+                handleCaptureRequestChange(result, true)
             }
         }
         camera2Interop.setSessionCaptureCallback(captureCallback)
@@ -653,10 +648,13 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
                         promise.resolve(imageInfo)
                     } catch (ex: Exception) {
                         Log.e(TAG, "Error while saving or decoding saved photo: ${ex.message}", ex)
-                        promise.reject("E_ON_IMG_SAVED", "Error while reading saved photo: ${ex.message}")
+                        promise.reject(
+                            "E_ON_IMG_SAVED",
+                            "Error while reading saved photo: ${ex.message}"
+                        )
                     }
-            }
-        })
+                }
+            })
     }
 
     private fun focusOnPoint(x: Float?, y: Float?) {
@@ -669,21 +667,15 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
 
         // Auto-cancel will clear focus points (and engage AF) after a duration
         if (autoFocus == "off") builder.disableAutoCancel()
-        Log.d(TAG, "Start manual focus")
-        updateFocusState(true);
-        val focusTask = camera?.cameraControl?.startFocusAndMetering(builder.build())
-        val focusRects = listOf(RectF(x - 75, y - 75, x + 75, y + 75))
+
+        camera?.cameraControl?.startFocusAndMetering(builder.build())
+        val rectSizePx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            25f,  // half side size in dp
+            resources.displayMetrics
+        )
+        val focusRects = listOf(RectF(x - rectSizePx, y - rectSizePx, x + rectSizePx, y + rectSizePx))
         rectOverlay.drawRectBounds(focusRects)
-        focusTask?.addListener({
-            try {
-                val result = focusTask.get()
-                updateFocusState(false)
-            } catch (e: Exception) {
-                updateFocusState(false)
-            } finally {
-                Log.d(TAG, "Manual focus end")
-            }
-        }, ContextCompat.getMainExecutor(context))
     }
 
     private fun onBarcodeRead(barcodes: List<Barcode>) {
@@ -925,6 +917,20 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         if (newResizeMode != resizeMode) {
             resizeMode = newResizeMode
             viewFinder?.scaleType = newResizeMode
+            // Rebuild FocusConverter with the updated resizeMode so coordinate mapping stays accurate.
+            // A full bindCameraUseCases() rebind is intentionally avoided to prevent a visible
+            // preview interruption (black flash) — resizeMode does not affect camera configuration.
+            val cameraInfo = camera?.cameraInfo
+            if (cameraInfo != null) {
+                focusConverter = FocusConverter(
+                    context,
+                    aspectRatio,
+                    resizeMode,
+                    lensType == CameraSelector.LENS_FACING_FRONT,
+                    cameraInfo,
+                    viewFinder
+                )
+            }
         }
     }
 

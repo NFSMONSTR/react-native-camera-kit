@@ -30,6 +30,16 @@ export type OnZoom = {
   };
 }
 
+export type OnFocusRectChanged = {
+  nativeEvent: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+  }
+}
+
+
 export interface CameraProps extends ViewProps {
   // Behavior
   flashMode?: FlashMode;
@@ -132,8 +142,6 @@ export interface CameraProps extends ViewProps {
   cameraPreShutterSound?: string;
   /** **Android only**. Calls when photo capture really started */
   onCaptureStarted?: () => void;
-  /** **Android only**. Calls when camera begin performing focus */
-  onFocusBegin?: () => void;
-  /** **Android only**. Calls when camera end performing focus */
-  onFocusEnd?: () => void;
+  /** **Android only**. Current focus rect */
+  onFocusRectChanged?: (data: OnFocusRectChanged) => void;
 }
