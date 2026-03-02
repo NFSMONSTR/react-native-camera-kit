@@ -63,7 +63,7 @@ class RectOverlay constructor(context: Context) :
     private val rectBounds: MutableList<RectF> = mutableListOf()
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
-        color = ContextCompat.getColor(context, android.R.color.holo_orange_light)
+        color = ContextCompat.getColor(context, android.R.color.white)
         strokeWidth = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP,
             1f,
