@@ -451,7 +451,7 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
     }
 
     private fun handleFocusRectChange(rect: FocusRect?) {
-        if (focusRect?.equals(rect) == true) {
+        if (focusRect == rect) {
             return
         }
         focusRect = rect
