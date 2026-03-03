@@ -480,6 +480,10 @@ class CKCamera(context: ThemedReactContext) : FrameLayout(context), LifecycleObs
         if (isCompleted) {
             if (afRegion != null && afRegion.size > 0) {
                 val region = afRegion?.maxByOrNull { it.meteringWeight }
+                if (region != null && (region?.width == 0 || region?.height == 0)) {
+                    handleFocusRectChange(null)
+                    return
+                }
                 handleFocusRectChange(focusConverter?.sensorToPreview(region))
             } else {
                 handleFocusRectChange(null)
